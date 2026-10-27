@@ -1,0 +1,95 @@
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Scanner;
+
+/**
+ * Two-stack algorithm (Dijkstra's Shunting-Yard idea) to evaluate an expression string.
+ *
+ * ALGORITHM:
+ * 1. Create two stacks: one for numbers, one for operators.
+ * 2. Scan the string left to right:
+ *    a. Digit or '.'  -> read the full number, push to number stack.
+ *    b. '('           -> push to operator stack.
+ *    c. ')'           -> apply operators until '(' is found, then pop '('.
+ *    d. Operator      -> while the top operator has higher or equal precedence,
+ *                        apply it; then push the current operator.
+ * 3. After the scan, apply all remaining operators.
+ * 4. The one value left on the number stack is the answer.
+ */
+public class StackCalculator {
+
+    static int precedence(char op) {
+        if (op == '+' || op == '-') return 1;
+        if (op == '*' || op == '/') return 2;
+        return 0; // '('
+    }
+
+    static void applyTop(Deque<Double> nums, Deque<Character> ops) {
+        char op = ops.pop();
+        double b = nums.pop();
+        double a = nums.pop();
+        switch (op) {
+            case '+': nums.push(a + b); break;
+            case '-': nums.push(a - b); break;
+            case '*': nums.push(a * b); break;
+            case '/':
+                if (b == 0) throw new ArithmeticException("Cannot divide by zero");
+                nums.push(a / b);
+                break;
+        }
+    }
+
+    static double evaluate(String expr) {
+        Deque<Double> nums = new ArrayDeque<>();
+        Deque<Character> ops = new ArrayDeque<>();
+        String s = expr.replaceAll("\\s+", "");
+
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+
+            if (Character.isDigit(c) || c == '.') {
+                int start = i;
+                while (i + 1 < s.length()
+                        && (Character.isDigit(s.charAt(i + 1)) || s.charAt(i + 1) == '.')) {
+                    i++;
+                }
+                nums.push(Double.parseDouble(s.substring(start, i + 1)));
+            } else if (c == '(') {
+                ops.push(c);
+            } else if (c == ')') {
+                while (!ops.isEmpty() && ops.peek() != '(') applyTop(nums, ops);
+                if (ops.isEmpty()) throw new IllegalArgumentException("Mismatched )");
+                ops.pop();
+            } else if ("+-*/".indexOf(c) >= 0) {
+                while (!ops.isEmpty() && precedence(ops.peek()) >= precedence(c)) {
+                    applyTop(nums, ops);
+                }
+                ops.push(c);
+            } else {
+                throw new IllegalArgumentException("Invalid character: " + c);
+            }
+        }
+
+        while (!ops.isEmpty()) {
+            if (ops.peek() == '(') throw new IllegalArgumentException("Mismatched (");
+            applyTop(nums, ops);
+        }
+        return nums.pop();
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Enter expression (e.g. 10+2*(6-4)), or 'exit':");
+        while (true) {
+            System.out.print("> ");
+            String input = sc.nextLine();
+            if (input.equalsIgnoreCase("exit")) break;
+            try {
+                System.out.println("= " + evaluate(input));
+            } catch (RuntimeException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        }
+        sc.close();
+    }
+}
