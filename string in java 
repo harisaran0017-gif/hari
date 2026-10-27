@@ -1,0 +1,88 @@
+import java.util.Scanner;
+
+public class StringCalculator {
+    private final String s;
+    private int pos = 0;
+
+    public StringCalculator(String expression) {
+        this.s = expression.replaceAll("\\s+", "");
+    }
+
+    public double evaluate() {
+        double result = parseExpression();
+        if (pos < s.length()) {
+            throw new RuntimeException("Unexpected character: " + s.charAt(pos));
+        }
+        return result;
+    }
+
+    // expression = term (('+' | '-') term)*
+    private double parseExpression() {
+        double value = parseTerm();
+        while (pos < s.length()) {
+            char c = s.charAt(pos);
+            if (c == '+') { pos++; value += parseTerm(); }
+            else if (c == '-') { pos++; value -= parseTerm(); }
+            else break;
+        }
+        return value;
+    }
+
+    // term = factor (('*' | '/') factor)*
+    private double parseTerm() {
+        double value = parseFactor();
+        while (pos < s.length()) {
+            char c = s.charAt(pos);
+            if (c == '*') { pos++; value *= parseFactor(); }
+            else if (c == '/') {
+                pos++;
+                double d = parseFactor();
+                if (d == 0) throw new RuntimeException("Cannot divide by zero");
+                value /= d;
+            }
+            else break;
+        }
+        return value;
+    }
+
+    // factor = number | '(' expression ')' | '-' factor
+    private double parseFactor() {
+        if (pos >= s.length()) throw new RuntimeException("Unexpected end");
+        char c = s.charAt(pos);
+
+        if (c == '-') { pos++; return -parseFactor(); }
+        if (c == '(') {
+            pos++;
+            double value = parseExpression();
+            if (pos >= s.length() || s.charAt(pos) != ')') {
+                throw new RuntimeException("Missing closing )");
+            }
+            pos++;
+            return value;
+        }
+
+        int start = pos;
+        while (pos < s.length() && (Character.isDigit(s.charAt(pos)) || s.charAt(pos) == '.')) {
+            pos++;
+        }
+        if (start == pos) throw new RuntimeException("Invalid character: " + c);
+        return Double.parseDouble(s.substring(start, pos));
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("Enter expression (e.g. 2+3*(4-1)), or 'exit':");
+
+        while (true) {
+            System.out.print("> ");
+            String input = sc.nextLine();
+            if (input.equalsIgnoreCase("exit")) break;
+            try {
+                System.out.println("= " + new StringCalculator(input).evaluate());
+            } catch (RuntimeException e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        }
+        sc.close();
+    }
+}
